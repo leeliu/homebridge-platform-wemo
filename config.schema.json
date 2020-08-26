@@ -47,6 +47,17 @@
         "placeholder": "30",
         "description": "Sets the interval in seconds at which SSDP-SEARCH broadcasts are sent. It will influence the time it takes to discover NEW devices."
       },
+      "refresh": {
+        "type": "boolean",
+        "title": "Refresh",
+        "description": "default: true. A way to disable device on/off polling if not required."
+      },
+      "refreshInterval": {
+        "type": "integer",
+        "title": "Refresh Interval",
+        "placeholder": "900",
+        "description": "Sets the interval in seconds at which to poll switch on/off state."
+      },
       "wemoClient": {
         "type": "array",
         "title": "Wemo Client"
@@ -129,6 +140,8 @@
         "noMotionTimer",
         "discovery",
         "discoveryInterval",
+        "refresh",
+        "refreshInterval",
         {
           "type": "help",
           "helpvalue": "<h6>Wemo Client</h6><em class='primary-text'>See Manual Setup Wiki to manually configure this.</em>"

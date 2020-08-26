@@ -11,6 +11,8 @@
 //          "manualDevices": [],    // optional: an array of config urls for devices to be manually configured eg. "manualDevices": ["http://192.168.1.20:49153/setup.xml"]
 //          "discovery": true,      // optional: turn off device discovery if not required
 //          "discoveryInterval": 30 // optional: the interval in seconds at which to send ssdp-search requests
+//          "refresh": true,        // optional: turn off device on/off polling if not required
+//          "refreshInterval": 900  // optional: the interval in seconds at which to poll switch on/off state
 //          "wemoClient": {}        // optional: initialisation parameters to be passed to wemo-client
 //      }
 // ],
@@ -29,7 +31,7 @@ var Wemo = require("wemo-client"),
 var Accessory, Characteristic, Consumption, Service, TotalConsumption, UUIDGen;
 var wemo = new Wemo();
 
-var doorOpenTimer, noMotionTimer;
+var doorOpenTimer, noMotionTimer, refresh, refreshInterval;
 
 module.exports = function (homebridge) {
   Accessory = homebridge.platformAccessory;
@@ -143,6 +145,10 @@ function WemoPlatform(log, config, api) {
     this.config.noMotionTimer ||
     this.config.no_motion_timer ||
     DEFAULT_NO_MOTION_TIME;
+
+  refresh = this.config.refresh || true;
+  refreshInterval = this.config.refreshInterval || 900;
+
 
   var addDiscoveredDevice = function (err, device) {
     if (!device) {
@@ -778,6 +784,8 @@ WemoAccessory.prototype.getAttributes = function (callback) {
 };
 
 WemoAccessory.prototype.getSwitchState = function (callback) {
+  callback = callback || function () {};
+
   if (this.device.deviceType === Wemo.DEVICE_TYPE.Maker) {
     this.getAttributes(
       function () {
@@ -795,7 +803,8 @@ WemoAccessory.prototype.getSwitchState = function (callback) {
         if (err) {
           var service =
             this.accessory.getService(Service.Switch) ||
-            this.accessory.getService(Service.Outlet);
+            this.accessory.getService(Service.Outlet) ||
+            this.accessory.getService(Service.Lightbulb);
           callback(null, service.getCharacteristic(Characteristic.On).value);
           return;
         }
@@ -807,6 +816,8 @@ WemoAccessory.prototype.getSwitchState = function (callback) {
 };
 
 WemoAccessory.prototype.observeDevice = function (device) {
+  var self = this;
+
   if (device.deviceType === Wemo.DEVICE_TYPE.Maker) {
     this.getAttributes();
 
@@ -864,6 +875,15 @@ WemoAccessory.prototype.observeDevice = function (device) {
         }
       }.bind(this)
     );
+
+    if (refresh) {
+      var pollDevice = function() {
+        self.getSwitchState();
+        setTimeout(pollDevice, refreshInterval * 1000);
+      };
+
+      setTimeout(pollDevice, parseInt(Math.random() * 50000) + 10000); // kick off randomly staggered polling
+    }
   }
 
   if (device.deviceType === Wemo.DEVICE_TYPE.Insight) {
